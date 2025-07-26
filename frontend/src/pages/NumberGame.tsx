@@ -265,11 +265,11 @@ export default function NumberGame() {
       </div>
 
       {/* 游戏状态 */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-2 sm:gap-0">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Clock className="h-5 w-5 text-gray-500" />
-            <span className="text-lg font-semibold font-mono">
+            <span className="text-base sm:text-lg font-semibold font-mono">
               {gameState.isPlaying
                 ? formatTime(currentTime)
                 : gameState.endTime && gameState.startTime
@@ -277,19 +277,18 @@ export default function NumberGame() {
                 : '00:00.00'}
             </span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Target className="h-5 w-5 text-gray-500" />
-            <span className="text-lg font-semibold">
+            <span className="text-base sm:text-lg font-semibold">
               目标: {Math.min(gameState.currentNumber, 25)}/25
             </span>
           </div>
         </div>
-        
-        <div className="flex space-x-2">
+        <div className="flex flex-row gap-2 w-full sm:w-auto justify-center sm:justify-end">
           {!gameState.isPlaying && gameState.currentNumber === 1 && (
             <button
               onClick={startGame}
-              className="btn-primary inline-flex items-center"
+              className="btn-primary inline-flex items-center text-sm sm:text-base px-3 py-1 sm:px-4 sm:py-2"
             >
               <Play className="mr-2 h-4 w-4" />
               开始游戏
@@ -298,7 +297,7 @@ export default function NumberGame() {
           {gameState.isPlaying && (
             <button
               onClick={resetGame}
-              className="btn-secondary inline-flex items-center"
+              className="btn-secondary inline-flex items-center text-sm sm:text-base px-3 py-1 sm:px-4 sm:py-2"
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               重置
@@ -307,7 +306,7 @@ export default function NumberGame() {
           {gameState.currentNumber > 25 && (
             <button
               onClick={startGame}
-              className="btn-primary inline-flex items-center"
+              className="btn-primary inline-flex items-center text-sm sm:text-base px-3 py-1 sm:px-4 sm:py-2"
             >
               <Play className="mr-2 h-4 w-4" />
               重新开始
@@ -379,7 +378,6 @@ export default function NumberGame() {
             刷新
           </button>
         </div>
-        
         {gameState.leaderboard.length === 0 ? (
           <p className="text-gray-500 text-center py-4">暂无记录</p>
         ) : (
@@ -387,27 +385,28 @@ export default function NumberGame() {
             {gameState.leaderboard.map((score, index) => (
               <div
                 key={score.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="p-3 bg-gray-50 rounded-lg"
               >
-                <div className="flex items-center space-x-4">
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    index === 0 ? 'bg-yellow-500 text-white' :
-                    index === 1 ? 'bg-gray-400 text-white' :
-                    index === 2 ? 'bg-orange-500 text-white' :
-                    'bg-gray-200 text-gray-700'
-                  }`}>
-                    {index + 1}
-                  </span>
-                  <span className="font-medium">{score.username}</span>
-                </div>
-                                  <div className="flex items-center space-x-4">
-                    <span className="text-sm text-gray-500 font-mono">
-                      {formatTime(score.time)}
+                {/* 移动端分三行，大屏原样 */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
+                  <div className="flex items-center gap-2 mb-1 sm:mb-0">
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                      index === 0 ? 'bg-yellow-500 text-white' :
+                      index === 1 ? 'bg-gray-400 text-white' :
+                      index === 2 ? 'bg-orange-500 text-white' :
+                      'bg-gray-200 text-gray-700'
+                    }`}>
+                      {index + 1}
                     </span>
-                    <span className="text-sm text-gray-400">
-                      {new Date(score.createdAt).toLocaleDateString()}
-                    </span>
+                    <span className="font-medium break-all text-sm sm:text-base">{score.username}</span>
                   </div>
+                  <div className="text-xs sm:text-sm text-gray-500 font-mono mb-1 sm:mb-0">
+                    {formatTime(score.time)}
+                  </div>
+                  <div className="text-xs sm:text-sm text-gray-400">
+                    {new Date(score.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
