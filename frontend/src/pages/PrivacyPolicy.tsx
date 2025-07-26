@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, Eye, Lock, Users, FileText } from 'lucide-react';
 
 // 隐私条款配置 - 可以在这里维护内容

@@ -39,7 +39,6 @@ export default function Login() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    const newValue = type === 'checkbox' ? checked : value;
     
     // 更新 ref 中的对应字段
     if (name === 'username') {

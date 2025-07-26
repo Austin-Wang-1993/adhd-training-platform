@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Play, RotateCcw, Trophy, Clock, AlertCircle, Target, Zap, Brain } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Play, RotateCcw, Clock, AlertCircle, Target, Zap, Brain } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatTime } from '../lib/utils';
 import { GameScore, GameDifficulty } from '../types';

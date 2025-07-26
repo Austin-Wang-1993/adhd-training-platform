@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { ApiResponse } from '../types';
 
 const api = axios.create({
   baseURL: '/api',

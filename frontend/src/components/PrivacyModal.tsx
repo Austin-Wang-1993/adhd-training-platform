@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { X, Shield, Check } from 'lucide-react';
 
 interface PrivacyModalProps {
