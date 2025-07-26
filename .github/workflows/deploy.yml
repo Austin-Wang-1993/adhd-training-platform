@@ -2,7 +2,7 @@ name: Deploy to Tencent Cloud
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   deploy:
@@ -37,6 +37,6 @@ jobs:
         key: ${{ secrets.SSH_KEY }}
         script: |
           cd /var/www/adhd-app
-          git pull origin main
+          git pull origin master
           chmod +x deploy.sh
           ./deploy.sh 
