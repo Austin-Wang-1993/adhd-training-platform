@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const scoreRoutes = require('./routes/scores');
+const adminRoutes = require('./routes/admin');
 const { initDatabase, closeDatabase } = require('./database');
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(express.json());
 // 路由
 app.use('/api/auth', authRoutes);
 app.use('/api/scores', scoreRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

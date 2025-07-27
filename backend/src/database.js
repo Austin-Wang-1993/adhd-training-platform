@@ -1,227 +1,379 @@
-const fs = require('fs');
-const path = require('path');
+const { PrismaClient } = require('@prisma/client');
 
-// 数据文件路径
-const dataDir = path.join(__dirname, '..', 'data');
-const usersFile = path.join(dataDir, 'users.json');
-const scoresFile = path.join(dataDir, 'scores.json');
-
-// 内存存储（用于缓存）
-let users = new Map();
-let scores = new Map();
-
-// 生成UUID
-function generateId() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-// 确保数据目录存在
-function ensureDataDir() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-}
-
-// 从文件加载数据
-function loadData() {
-  try {
-    if (fs.existsSync(usersFile)) {
-      const usersData = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
-      users = new Map(Object.entries(usersData));
-    }
-    
-    if (fs.existsSync(scoresFile)) {
-      const scoresData = JSON.parse(fs.readFileSync(scoresFile, 'utf8'));
-      scores = new Map(Object.entries(scoresData));
-    }
-  } catch (error) {
-    console.error('加载数据失败:', error.message);
-    // 如果文件损坏，使用空数据
-    users = new Map();
-    scores = new Map();
-  }
-}
-
-// 保存数据到文件
-function saveData() {
-  try {
-    ensureDataDir();
-    
-    // 将 Map 转换为对象
-    const usersObj = Object.fromEntries(users);
-    const scoresObj = Object.fromEntries(scores);
-    
-    fs.writeFileSync(usersFile, JSON.stringify(usersObj, null, 2));
-    fs.writeFileSync(scoresFile, JSON.stringify(scoresObj, null, 2));
-  } catch (error) {
-    console.error('保存数据失败:', error.message);
-  }
-}
+// 创建 Prisma 客户端实例
+const prisma = new PrismaClient();
 
 // 初始化数据库
-function initDatabase() {
-  return new Promise((resolve, reject) => {
-    try {
-      ensureDataDir();
-      loadData();
-      console.log('文件数据库初始化完成');
-      console.log(`用户数据文件: ${usersFile}`);
-      console.log(`成绩数据文件: ${scoresFile}`);
-      resolve();
-    } catch (error) {
-      console.error('数据库初始化失败:', error.message);
-      reject(error);
-    }
-  });
+async function initDatabase() {
+  try {
+    // 测试数据库连接
+    await prisma.$connect();
+    console.log('PostgreSQL数据库连接成功');
+    
+    // 检查数据库表是否存在
+    const userCount = await prisma.user.count();
+    console.log(`数据库初始化完成，当前用户数: ${userCount}`);
+    
+    return true;
+  } catch (error) {
+    console.error('数据库初始化失败:', error.message);
+    throw error;
+  }
 }
 
 // 用户相关操作
 const userOperations = {
   // 创建用户
-  createUser: (username, passwordHash) => {
-    return new Promise((resolve, reject) => {
-      try {
-        const id = generateId();
-        const user = {
-          id,
+  createUser: async (username, passwordHash) => {
+    try {
+      const user = await prisma.user.create({
+        data: {
           username,
-          password_hash: passwordHash,
-          created_at: new Date().toISOString()
-        };
-        
-        users.set(id, user);
-        saveData();
-        
-        resolve({ id, username });
-      } catch (error) {
-        reject(error);
+          passwordHash
+        },
+        select: {
+          id: true,
+          username: true,
+          createdAt: true
+        }
+      });
+      
+      return user;
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new Error('用户名已存在');
       }
-    });
+      throw error;
+    }
   },
 
   // 根据用户名查找用户
-  findByUsername: (username) => {
-    return new Promise((resolve, reject) => {
-      try {
-        for (const user of users.values()) {
-          if (user.username === username) {
-            resolve(user);
-            return;
-          }
-        }
-        resolve(null);
-      } catch (error) {
-        reject(error);
-      }
-    });
+  findByUsername: async (username) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { username }
+      });
+      
+      return user;
+    } catch (error) {
+      throw error;
+    }
   },
 
   // 根据ID查找用户
-  findById: (id) => {
-    return new Promise((resolve, reject) => {
-      try {
-        const user = users.get(id);
-        if (user) {
-          resolve({
-            id: user.id,
-            username: user.username,
-            created_at: user.created_at
-          });
-        } else {
-          resolve(null);
+  findById: async (id) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          username: true,
+          createdAt: true
         }
-      } catch (error) {
-        reject(error);
-      }
-    });
+      });
+      
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // 获取用户列表（管理端用）
+  getUsers: async (page = 1, limit = 10, search = '') => {
+    try {
+      const skip = (page - 1) * limit;
+      
+      const where = search ? {
+        username: {
+          contains: search,
+          mode: 'insensitive'
+        }
+      } : {};
+      
+      const [users, total] = await Promise.all([
+        prisma.user.findMany({
+          where,
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            username: true,
+            createdAt: true,
+            _count: {
+              select: { scores: true }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        }),
+        prisma.user.count({ where })
+      ]);
+      
+      return {
+        users,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // 删除用户（管理端用）
+  deleteUser: async (id) => {
+    try {
+      await prisma.user.delete({
+        where: { id }
+      });
+      
+      return true;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 
 // 成绩相关操作
 const scoreOperations = {
   // 创建成绩记录
-  createScore: (userId, gameType, score, time, difficulty = 'easy') => {
-    return new Promise((resolve, reject) => {
-      try {
-        const id = generateId();
-        const scoreRecord = {
-          id,
-          user_id: userId,
-          game_type: gameType,
+  createScore: async (userId, gameType, score, time, difficulty = 'easy') => {
+    try {
+      const scoreRecord = await prisma.score.create({
+        data: {
+          userId,
+          gameType,
           score,
-          time, // 存储毫秒级时间
-          difficulty,
-          created_at: new Date().toISOString()
-        };
-        
-        scores.set(id, scoreRecord);
-        saveData();
-        
-        resolve({ id, userId, gameType, score, time, difficulty });
-      } catch (error) {
-        reject(error);
-      }
-    });
+          time,
+          difficulty
+        }
+      });
+      
+      return scoreRecord;
+    } catch (error) {
+      throw error;
+    }
   },
 
   // 获取游戏排行榜
-  getLeaderboard: (gameType, difficulty = 'easy', limit = 10) => {
-    return new Promise((resolve, reject) => {
-      try {
-        const gameScores = Array.from(scores.values())
-          .filter(score => score.game_type === gameType && score.difficulty === difficulty)
-          .sort((a, b) => {
-            // 按时间升序，时间相同时按创建时间升序
-            if (a.time !== b.time) {
-              return a.time - b.time;
+  getLeaderboard: async (gameType, difficulty = 'easy', limit = 10) => {
+    try {
+      const leaderboard = await prisma.score.findMany({
+        where: {
+          gameType,
+          difficulty
+        },
+        include: {
+          user: {
+            select: {
+              username: true
             }
-            return new Date(a.created_at) - new Date(b.created_at);
-          })
-          .slice(0, limit);
-
-        // 添加用户名信息
-        const result = gameScores.map(score => {
-          const user = users.get(score.user_id);
-          return {
-            ...score,
-            username: user ? user.username : '未知用户'
-          };
-        });
-        
-        resolve(result);
-      } catch (error) {
-        reject(error);
-      }
-    });
+          }
+        },
+        orderBy: [
+          { time: 'asc' },
+          { createdAt: 'asc' }
+        ],
+        take: limit
+      });
+      
+      return leaderboard.map(score => ({
+        ...score,
+        username: score.user.username
+      }));
+    } catch (error) {
+      throw error;
+    }
   },
 
   // 获取用户成绩
-  getUserScores: (userId, gameType, difficulty = 'easy') => {
-    return new Promise((resolve, reject) => {
-      try {
-        const userScores = Array.from(scores.values())
-          .filter(score => score.user_id === userId && score.game_type === gameType && score.difficulty === difficulty)
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        
-        resolve(userScores);
-      } catch (error) {
-        reject(error);
+  getUserScores: async (userId, gameType, difficulty = 'easy') => {
+    try {
+      const scores = await prisma.score.findMany({
+        where: {
+          userId,
+          gameType,
+          difficulty
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      return scores;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // 获取成绩统计（管理端用）
+  getScoreStats: async () => {
+    try {
+      const stats = await prisma.score.groupBy({
+        by: ['gameType', 'difficulty'],
+        _count: {
+          id: true
+        },
+        _avg: {
+          time: true,
+          score: true
+        },
+        _min: {
+          time: true
+        },
+        _max: {
+          time: true
+        }
+      });
+      
+      return stats;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // 删除成绩记录（管理端用）
+  deleteScore: async (id) => {
+    try {
+      await prisma.score.delete({
+        where: { id }
+      });
+      
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  }
+};
+
+// 管理端相关操作
+const adminOperations = {
+  // 创建管理员
+  createAdmin: async (username, passwordHash, role = 'admin') => {
+    try {
+      const admin = await prisma.admin.create({
+        data: {
+          username,
+          passwordHash,
+          role
+        },
+        select: {
+          id: true,
+          username: true,
+          role: true,
+          isActive: true,
+          createdAt: true
+        }
+      });
+      
+      return admin;
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new Error('管理员用户名已存在');
       }
-    });
+      throw error;
+    }
+  },
+
+  // 管理员登录
+  findByUsername: async (username) => {
+    try {
+      const admin = await prisma.admin.findUnique({
+        where: { username }
+      });
+      
+      return admin;
+    } catch (error) {
+      throw error;
+    }
+  }
+};
+
+// 系统配置操作
+const configOperations = {
+  // 获取配置
+  getConfig: async (key) => {
+    try {
+      const config = await prisma.systemConfig.findUnique({
+        where: { key }
+      });
+      
+      return config?.value;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // 设置配置
+  setConfig: async (key, value, description = null) => {
+    try {
+      const config = await prisma.systemConfig.upsert({
+        where: { key },
+        update: { value, description },
+        create: { key, value, description }
+      });
+      
+      return config;
+    } catch (error) {
+      throw error;
+    }
+  }
+};
+
+// 用户活动日志操作
+const activityOperations = {
+  // 记录用户活动
+  logActivity: async (userId, action, details = null, ipAddress = null, userAgent = null) => {
+    try {
+      const activity = await prisma.userActivity.create({
+        data: {
+          userId,
+          action,
+          details,
+          ipAddress,
+          userAgent
+        }
+      });
+      
+      return activity;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // 获取用户活动日志（管理端用）
+  getUserActivities: async (userId, page = 1, limit = 20) => {
+    try {
+      const skip = (page - 1) * limit;
+      
+      const [activities, total] = await Promise.all([
+        prisma.userActivity.findMany({
+          where: { userId },
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' }
+        }),
+        prisma.userActivity.count({ where: { userId } })
+      ]);
+      
+      return {
+        activities,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 };
 
 // 关闭数据库连接
-function closeDatabase() {
+async function closeDatabase() {
   try {
-    saveData();
-    console.log('数据已保存到文件');
+    await prisma.$disconnect();
+    console.log('数据库连接已关闭');
   } catch (error) {
-    console.error('保存数据失败:', error.message);
+    console.error('关闭数据库连接失败:', error.message);
   }
 }
 
@@ -229,5 +381,9 @@ module.exports = {
   initDatabase,
   userOperations,
   scoreOperations,
-  closeDatabase
+  adminOperations,
+  configOperations,
+  activityOperations,
+  closeDatabase,
+  prisma
 }; 

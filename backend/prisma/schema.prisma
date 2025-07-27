@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  // 关联关系
+  scores Score[]
+  
+  @@map("users")
+}
+
+model Score {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  gameType   String   @map("game_type")
+  score      Int
+  time       Int      // 毫秒级时间
+  difficulty String   @default("easy")
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  // 关联关系
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("scores")
+}
+
+// 管理端用户模型
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("admin") // admin, super_admin
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  @@map("admins")
+}
+
+// 系统配置模型
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@map("system_configs")
+}
+
+// 用户活动日志
+model UserActivity {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  action    String   // login, game_start, game_complete, etc.
+  details   Json?    // 详细数据
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // 关联关系
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_activities")
+} 

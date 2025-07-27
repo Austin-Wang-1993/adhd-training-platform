@@ -5,7 +5,12 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:init": "node scripts/init-db.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -14,10 +19,12 @@
     "jsonwebtoken": "^9.0.2",
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "@prisma/client": "^5.7.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "prisma": "^5.7.1"
   },
   "keywords": ["adhd", "game", "api"],
   "author": "ADHD Team",
