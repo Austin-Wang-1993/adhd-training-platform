@@ -5,7 +5,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const scoreRoutes = require('./routes/scores');
-const { initDatabase } = require('./database');
+const { initDatabase, closeDatabase } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -133,13 +133,35 @@ app.use('*', (req, res) => {
 });
 
 // 启动服务器
-function startServer() {
+async function startServer() {
   try {
-    initDatabase();
-    app.listen(PORT, () => {
+    // 初始化数据库
+    await initDatabase();
+    
+    const server = app.listen(PORT, () => {
       console.log(`服务器运行在端口 ${PORT}`);
       console.log(`健康检查: http://localhost:${PORT}/api/health`);
     });
+
+    // 优雅关闭
+    process.on('SIGTERM', () => {
+      console.log('收到 SIGTERM 信号，正在关闭服务器...');
+      server.close(() => {
+        console.log('HTTP 服务器已关闭');
+        closeDatabase();
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      console.log('收到 SIGINT 信号，正在关闭服务器...');
+      server.close(() => {
+        console.log('HTTP 服务器已关闭');
+        closeDatabase();
+        process.exit(0);
+      });
+    });
+
   } catch (error) {
     console.error('启动服务器失败:', error);
     process.exit(1);

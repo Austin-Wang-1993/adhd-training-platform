@@ -1,12 +1,11 @@
 {
   "name": "adhd-backend",
   "version": "1.0.0",
-  "description": "ADHD儿童服务应用后端API",
+  "description": "ADHD训练平台后端服务",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -20,7 +19,7 @@
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
-  "keywords": ["adhd", "api", "backend"],
+  "keywords": ["adhd", "game", "api"],
   "author": "ADHD Team",
   "license": "MIT"
 } 

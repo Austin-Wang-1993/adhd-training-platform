@@ -51,7 +51,7 @@ router.post('/register', [
       }
       return true;
     })
-], (req, res) => {
+], async (req, res) => {
   try {
     // 检查验证错误
     const errors = validationResult(req);
@@ -65,7 +65,7 @@ router.post('/register', [
     const { username, password } = req.body;
 
     // 检查用户名是否已存在
-    const existingUser = userOperations.findByUsername(username);
+    const existingUser = await userOperations.findByUsername(username);
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -78,7 +78,7 @@ router.post('/register', [
     const passwordHash = bcrypt.hashSync(password, saltRounds);
 
     // 创建用户
-    const user = userOperations.createUser(username, passwordHash);
+    const user = await userOperations.createUser(username, passwordHash);
 
     // 生成JWT token
     const token = jwt.sign(
@@ -113,7 +113,7 @@ router.post('/login', [
     .notEmpty().withMessage('用户名不能为空'),
   body('password')
     .notEmpty().withMessage('密码不能为空')
-], (req, res) => {
+], async (req, res) => {
   try {
     // 检查验证错误
     const errors = validationResult(req);
@@ -127,7 +127,7 @@ router.post('/login', [
     const { username, password } = req.body;
 
     // 查找用户
-    const user = userOperations.findByUsername(username);
+    const user = await userOperations.findByUsername(username);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -172,7 +172,7 @@ router.post('/login', [
 });
 
 // 获取当前用户信息
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -185,7 +185,7 @@ router.get('/me', (req, res) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    const user = userOperations.findById(decoded.userId);
+    const user = await userOperations.findById(decoded.userId);
     if (!user) {
       return res.status(401).json({
         success: false,

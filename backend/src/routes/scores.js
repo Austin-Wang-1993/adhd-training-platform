@@ -54,7 +54,7 @@ router.post('/', [
   body('difficulty')
     .optional()
     .isIn(['easy', 'medium', 'hard']).withMessage('难度必须是 easy、medium 或 hard')
-], (req, res) => {
+], async (req, res) => {
   try {
     // 检查验证错误
     const errors = validationResult(req);
@@ -69,7 +69,7 @@ router.post('/', [
     const userId = req.user.userId;
 
     // 创建成绩记录
-    const newScore = scoreOperations.createScore(userId, gameType, score, time, difficulty);
+    const newScore = await scoreOperations.createScore(userId, gameType, score, time, difficulty);
 
     res.json({
       success: true,
@@ -93,7 +93,7 @@ router.post('/', [
 });
 
 // 获取游戏排行榜
-router.get('/:gameType', (req, res) => {
+router.get('/:gameType', async (req, res) => {
   try {
     const { gameType } = req.params;
     const { difficulty = 'easy', limit: limitParam } = req.query;
@@ -118,7 +118,7 @@ router.get('/:gameType', (req, res) => {
     }
 
     // 获取排行榜
-    const leaderboard = scoreOperations.getLeaderboard(gameType, difficulty, limit);
+    const leaderboard = await scoreOperations.getLeaderboard(gameType, difficulty, limit);
 
     res.json({
       success: true,
@@ -145,7 +145,7 @@ router.get('/:gameType', (req, res) => {
 // 获取用户个人成绩
 router.get('/user/:gameType', [
   authenticateUser
-], (req, res) => {
+], async (req, res) => {
   try {
     const { gameType } = req.params;
     const { difficulty = 'easy' } = req.query;
@@ -170,7 +170,7 @@ router.get('/user/:gameType', [
     }
 
     // 获取用户成绩
-    const userScores = scoreOperations.getUserScores(userId, gameType, difficulty);
+    const userScores = await scoreOperations.getUserScores(userId, gameType, difficulty);
 
     res.json({
       success: true,
